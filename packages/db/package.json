@@ -1,0 +1,21 @@
+{
+  "name": "@sharvic/db",
+  "version": "0.1.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "drizzle-orm": "^0.36.4",
+    "nanoid": "^5.0.9"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "drizzle-kit": "^0.28.1",
+    "typescript": "^5.7.2"
+  }
+}
