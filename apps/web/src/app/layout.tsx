@@ -1,9 +1,20 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
 export const metadata: Metadata = {
-  title: "Sharvic Micro-Finance - Village Banking System",
-  description: "Village Banking Management System for Sharvic Micro-Finance Group",
+  title: {
+    default: "Sharvic Micro-Finance",
+    template: "%s · Sharvic Micro-Finance",
+  },
+  description:
+    "Village banking management for Sharvic Micro-Finance Group — members, savings, loans, credit scores and reports.",
 };
 
 export default function RootLayout({
@@ -13,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className={`${inter.variable} font-sans antialiased`}>{children}</body>
     </html>
   );
 }

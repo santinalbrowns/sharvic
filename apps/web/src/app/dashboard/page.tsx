@@ -1,80 +1,245 @@
 'use client';
+
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import api from '@/lib/api';
-import { Users, CreditCard, PiggyBank, Receipt, AlertCircle } from 'lucide-react';
+import { formatCurrency, formatNumber } from '@/lib/format';
+import {
+  AlertCircle,
+  ArrowUpRight,
+  CreditCard,
+  PiggyBank,
+  Receipt,
+  Users,
+  Wallet,
+} from 'lucide-react';
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<any>(null);
+
   useEffect(() => {
-    api.get('/reports/summary').then(res => setSummary(res.data)).catch(console.error);
+    api
+      .get('/reports/summary')
+      .then((res) => setSummary(res.data))
+      .catch(console.error);
   }, []);
+
   const stats = [
-    { name: 'Total Members', value: summary?.totalMembers || 0, subtext: `${summary?.activeMembers || 0} active`, icon: Users, color: 'bg-blue-500' },
-    { name: 'Active Loans', value: summary?.disbursedLoans || 0, subtext: `${summary?.pendingLoans || 0} pending`, icon: CreditCard, color: 'bg-green-500' },
-    { name: 'Total Contributions', value: `K ${(summary?.totalContributions || 0).toLocaleString()}`, subtext: 'All time', icon: PiggyBank, color: 'bg-amber-500' },
-    { name: 'Outstanding Loans', value: `K ${(summary?.totalOutstanding || 0).toLocaleString()}`, subtext: 'To collect', icon: AlertCircle, color: 'bg-red-500' },
+    {
+      name: 'Total members',
+      value: formatNumber(summary?.totalMembers),
+      subtext: `${formatNumber(summary?.activeMembers)} active`,
+      icon: Users,
+      tint: 'bg-brand-50 text-brand-600',
+      href: '/members',
+    },
+    {
+      name: 'Active loans',
+      value: formatNumber(summary?.disbursedLoans),
+      subtext: `${formatNumber(summary?.pendingLoans)} pending approval`,
+      icon: CreditCard,
+      tint: 'bg-emerald-50 text-emerald-600',
+      href: '/loans',
+    },
+    {
+      name: 'Total contributions',
+      value: formatCurrency(summary?.totalContributions),
+      subtext: 'All time savings',
+      icon: PiggyBank,
+      tint: 'bg-amber-50 text-amber-600',
+      href: '/savings',
+    },
+    {
+      name: 'Outstanding loans',
+      value: formatCurrency(summary?.totalOutstanding),
+      subtext: 'Still to collect',
+      icon: AlertCircle,
+      tint: 'bg-rose-50 text-rose-600',
+      href: '/loans',
+    },
   ];
+
+  const quickActions = [
+    {
+      name: 'Add member',
+      description: 'Register a new group member',
+      href: '/members',
+      icon: Users,
+      tint: 'bg-brand-50 text-brand-600 group-hover:bg-brand-600',
+    },
+    {
+      name: 'New loan',
+      description: 'Check eligibility and apply',
+      href: '/loans',
+      icon: CreditCard,
+      tint: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600',
+    },
+    {
+      name: 'Record contribution',
+      description: 'Capture member savings',
+      href: '/savings',
+      icon: PiggyBank,
+      tint: 'bg-amber-50 text-amber-600 group-hover:bg-amber-600',
+    },
+    {
+      name: 'Add expense',
+      description: 'Log a group expenditure',
+      href: '/expenses',
+      icon: Receipt,
+      tint: 'bg-rose-50 text-rose-600 group-hover:bg-rose-600',
+    },
+  ];
+
+  const contributions = Number(summary?.totalContributions || 0);
+  const repayments = Number(summary?.totalRepayments || 0);
+  const expenses = Number(summary?.totalExpenses || 0);
+  const netPosition = contributions + repayments - expenses;
+  const loanBook = Number(summary?.totalLoanAmount || 0);
+  const collectionRate =
+    loanBook > 0
+      ? Math.min(100, Math.round((repayments / loanBook) * 100))
+      : 0;
+
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
-        <p className="mt-1 text-sm text-gray-600">Welcome to Sharvic Micro-Finance Village Banking Dashboard</p>
+    <div className="space-y-6">
+      <div className="page-header">
+        <div>
+          <p className="eyebrow">Overview</p>
+          <h1 className="page-title mt-2">Group overview</h1>
+          <p className="page-description">
+            A live snapshot of your village banking group&apos;s members, savings
+            and lending activity.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/reports" className="btn-secondary">
+            View reports
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+          <Link href="/loans" className="btn-primary">
+            <CreditCard className="h-4 w-4" />
+            New loan
+          </Link>
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.name} className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
-            <div className="p-6">
-              <div className="flex items-center">
-                <div className={`flex-shrink-0 ${stat.color} rounded-lg p-3`}>
-                  <stat.icon className="h-6 w-6 text-white" />
-                </div>
-                <div className="ml-4 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">{stat.name}</dt>
-                    <dd className="text-xl font-semibold text-gray-900">{stat.value}</dd>
-                    <dd className="text-xs text-gray-500 mt-1">{stat.subtext}</dd>
-                  </dl>
-                </div>
+          <Link key={stat.name} href={stat.href} className="stat-card group">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-500">{stat.name}</p>
+                <p className="mt-2 truncate text-2xl font-semibold tracking-tight text-slate-900">
+                  {stat.value}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">{stat.subtext}</p>
               </div>
+              <span className={`stat-icon ${stat.tint}`}>
+                <stat.icon className="h-5 w-5" />
+              </span>
             </div>
-          </div>
+            <span className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 scale-x-0 bg-gradient-to-r from-brand-500 to-brand-300 transition-transform duration-300 group-hover:scale-x-100" />
+          </Link>
         ))}
       </div>
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <section className="card xl:col-span-2">
+          <div className="card-header">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">
+                Quick actions
+              </h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                The tasks your team reaches for most.
+              </p>
+            </div>
           </div>
-          <div className="p-6 grid grid-cols-2 gap-4">
-            <a href="/members" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Users className="h-8 w-8 text-blue-600 mr-3" />
-              <div><p className="font-medium text-gray-900">Add Member</p><p className="text-sm text-gray-500">Register new member</p></div>
-            </a>
-            <a href="/loans" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <CreditCard className="h-8 w-8 text-green-600 mr-3" />
-              <div><p className="font-medium text-gray-900">New Loan</p><p className="text-sm text-gray-500">Apply for loan</p></div>
-            </a>
-            <a href="/savings" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <PiggyBank className="h-8 w-8 text-amber-600 mr-3" />
-              <div><p className="font-medium text-gray-900">Record Contribution</p><p className="text-sm text-gray-500">Add savings</p></div>
-            </a>
-            <a href="/expenses" className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Receipt className="h-8 w-8 text-red-600 mr-3" />
-              <div><p className="font-medium text-gray-900">Add Expense</p><p className="text-sm text-gray-500">Record expenditure</p></div>
-            </a>
+          <div className="card-body grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {quickActions.map((action) => (
+              <Link
+                key={action.name}
+                href={action.href}
+                className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition duration-150 hover:border-slate-300 hover:bg-slate-50/60"
+              >
+                <span
+                  className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-colors duration-150 group-hover:text-white ${action.tint}`}
+                >
+                  <action.icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-slate-900">
+                    {action.name}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-slate-500">
+                    {action.description}
+                  </span>
+                </span>
+                <ArrowUpRight className="ml-auto h-4 w-4 flex-shrink-0 text-slate-300 transition group-hover:text-slate-500" />
+              </Link>
+            ))}
           </div>
-        </div>
-        <div className="bg-white shadow-sm rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Financial Summary</h3>
+        </section>
+
+        <section className="card">
+          <div className="card-header">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">
+                Financial summary
+              </h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                Group position at a glance.
+              </p>
+            </div>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+              <Wallet className="h-4 w-4" />
+            </span>
           </div>
-          <div className="p-6 space-y-4">
-            <div className="flex justify-between"><span className="text-sm text-gray-600">Total Loans Disbursed</span><span className="text-sm font-semibold text-gray-900">K {(summary?.totalLoanAmount || 0).toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-sm text-gray-600">Total Repayments</span><span className="text-sm font-semibold text-green-600">K {(summary?.totalRepayments || 0).toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-sm text-gray-600">Total Expenses</span><span className="text-sm font-semibold text-red-600">K {(summary?.totalExpenses || 0).toLocaleString()}</span></div>
-            <div className="pt-4 border-t border-gray-200 flex justify-between"><span className="text-base font-medium text-gray-900">Net Position</span><span className="text-base font-semibold text-blue-600">K {((summary?.totalContributions || 0) + (summary?.totalRepayments || 0) - (summary?.totalExpenses || 0)).toLocaleString()}</span></div>
+          <div className="card-body space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-slate-500">Loans disbursed</span>
+              <span className="text-sm font-semibold text-slate-900">
+                {formatCurrency(summary?.totalLoanAmount)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-slate-500">Total repayments</span>
+              <span className="text-sm font-semibold text-emerald-600">
+                {formatCurrency(summary?.totalRepayments)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-slate-500">Total expenses</span>
+              <span className="text-sm font-semibold text-rose-600">
+                {formatCurrency(summary?.totalExpenses)}
+              </span>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-4">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                <span>Loan collection rate</span>
+                <span className="font-semibold text-slate-900">
+                  {collectionRate}%
+                </span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-500"
+                  style={{ width: `${collectionRate}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-4">
+              <span className="text-sm font-medium text-slate-900">
+                Net position
+              </span>
+              <span className="text-lg font-semibold text-brand-600">
+                {formatCurrency(netPosition)}
+              </span>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
