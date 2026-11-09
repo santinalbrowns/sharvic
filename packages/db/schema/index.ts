@@ -6,3 +6,4 @@ export * from './expenses';
 export * from './ledger';
 export * from './settings';
 export * from './penalties';
+export * from './payments';

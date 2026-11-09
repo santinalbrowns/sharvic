@@ -170,6 +170,7 @@ curl -X POST http://localhost:4000/api/loans/check-eligibility \
 - ❌ New member: <3 contributions
 - ❌ Overloaded: Already has 2 active loans
 - ❌ Low score: Credit score <40
+- ❌ Over limit: Requested amount exceeds score ÷ 100 × savings × 3
 - ❌ Defaulter: Has unpaid defaulted loans
 
 **Expected Results:**
@@ -177,7 +178,10 @@ curl -X POST http://localhost:4000/api/loans/check-eligibility \
 {
   "eligible": true/false,
   "reasons": ["array of reasons if not eligible"],
-  "creditScore": 75
+  "creditScore": 75,
+  "savingsBalance": 100000,
+  "loanToSavingsMultiplier": 3,
+  "maxLoanAmount": 225000
 }
 ```
 

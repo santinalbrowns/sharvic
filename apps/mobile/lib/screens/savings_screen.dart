@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:sharvic_mobile/providers/auth_provider.dart';
+import 'package:sharvic_mobile/screens/payment_screen.dart';
 import 'package:sharvic_mobile/services/api_service.dart';
 
 class SavingsScreen extends StatefulWidget {
@@ -45,6 +46,36 @@ class _SavingsScreenState extends State<SavingsScreen> {
         );
       }
     }
+  }
+
+  Future<void> _openAddSavings() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final memberId = authProvider.memberId;
+    if (memberId == null) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(
+          title: 'Add Savings',
+          description: 'Top up your savings account with mobile money.',
+          memberId: memberId,
+          initiatePayment: ({
+            required double amount,
+            required String phone,
+            required String operator,
+          }) {
+            return _apiService.initiateSavingsPayment(
+              memberId: memberId,
+              amount: amount,
+              phone: phone,
+              operator: operator,
+            );
+          },
+          onSuccess: _loadSavings,
+        ),
+      ),
+    );
   }
 
   @override
@@ -93,6 +124,18 @@ class _SavingsScreenState extends State<SavingsScreen> {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _openAddSavings,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Savings'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
               ),

@@ -104,6 +104,75 @@ After payment completion, users are redirected here with success/failure message
 }
 ```
 
+## Mobile App Payments (Direct Charge)
+
+The mobile app charges the member's mobile money wallet directly, so the member
+does not leave the app. The member selects Airtel Money or TNM Mpamba, enters an
+amount and phone number, and approves the prompt on their phone.
+
+### 1. List mobile money operators
+**Endpoint:** `GET /api/payments/operators`
+
+```json
+[
+  { "code": "airtel", "name": "Airtel Money" },
+  { "code": "tnm", "name": "TNM Mpamba" }
+]
+```
+
+### 2. Add savings
+**Endpoint:** `POST /api/payments/savings/initiate`
+
+```json
+{
+  "memberId": "member-id",
+  "amount": 10000,
+  "phone": "0991234567",
+  "operator": "airtel"
+}
+```
+
+Members can only pay their own account. Staff can pass `memberId` for another member.
+
+### 3. Repay a loan
+**Endpoint:** `POST /api/payments/loans/:loanId/repay/initiate`
+
+```json
+{
+  "amount": 25000,
+  "phone": "0991234567",
+  "operator": "tnm"
+}
+```
+
+The amount cannot exceed the loan's outstanding balance. A second repayment is
+blocked while another repayment for the same loan is awaiting confirmation.
+
+### 4. Check payment status
+**Endpoint:** `GET /api/payments/:paymentId/status`
+
+The app polls this endpoint after initiating a charge. While the payment is
+pending, the API re-queries PayChangu. When PayChangu confirms success, the API:
+
+- Creates the contribution and updates the savings balance, or
+- Creates the loan repayment, allocates it to the schedule, and updates the
+  outstanding balance.
+
+The same operation is safe to retry and will not double-credit a member.
+
+### 5. Webhook
+**Endpoint:** `POST /api/payments/webhook`
+
+Set this URL in the PayChangu dashboard:
+
+```
+{API_BASE_URL}/api/payments/webhook
+```
+
+The webhook always re-queries PayChangu before crediting a member. If
+`PAYCHANGU_WEBHOOK_SECRET` is set, the `Signature` header is validated with an
+HMAC-SHA256 hash of the raw request body.
+
 ## Payment Flow
 
 ### Cash Payment
@@ -160,25 +229,36 @@ curl http://localhost:4000/api/savings/verify-payment/TXN-123456 \
    - `/packages/db/schema/savings.ts` - Added payment fields to contributions table
 
 2. **Services**
-   - `/apps/api/src/services/paychangu.ts` - New Paychangu payment service
+   - `/apps/api/src/services/paychangu.ts` - Paychangu checkout, direct mobile money charge and verification
+   - `/apps/api/src/services/paymentProcessor.ts` - Applies successful payments to savings/loans idempotently
 
 3. **Routes**
    - `/apps/api/src/routes/savings.ts` - Enhanced contribution endpoint with payment support
+   - `/apps/api/src/routes/payments.ts` - Mobile app payment initiation, status polling and webhook
 
 4. **Configuration**
    - `/apps/api/.env` - Added Paychangu credentials
-   - `/apps/api/.env.example` - Updated example
+   - `/apps/api/.env.example` - Updated example (including optional webhook secret)
 
 5. **Migrations**
    - `/packages/db/migrations/0002_wet_goliath.sql` - Database migration for payment fields
+   - `/packages/db/migrations/0003_naive_bushwacker.sql` - `payments` table for direct charges
+
+6. **Mobile App**
+   - `/apps/mobile/lib/screens/payment_screen.dart` - Mobile money payment and status flow
+   - `/apps/mobile/lib/screens/savings_screen.dart` - "Add Savings" action
+   - `/apps/mobile/lib/screens/loan_details_screen.dart` - "Repay Loan" action
+   - `/apps/mobile/lib/services/api_service.dart` - Payment API calls
 
 ## Security Notes
 
 - Secret keys are stored in `.env` file (never commit to version control)
 - All payment operations require authentication
-- Only admin, chairperson, secretary, and treasurer can record contributions
-- Payment verification is performed server-side
-- Webhook endpoint validates payment status before updating records
+- Members can only initiate payments for their own savings/loans; staff can act for a member
+- Only admin, chairperson, secretary, and treasurer can record cash contributions
+- Payment verification is performed server-side against PayChangu
+- The webhook always re-queries PayChangu before crediting a member
+- Set `PAYCHANGU_WEBHOOK_SECRET` to also validate the webhook `Signature` header
 
 ## Currency
 The system uses MWK (Malawi Kwacha) as the default currency for Paychangu payments.

@@ -198,6 +198,94 @@ class ApiService {
     }
   }
 
+  // Payments (PayChangu mobile money)
+  Future<List<dynamic>> getPaymentOperators() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/payments/operators'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else {
+      throw Exception('Failed to load payment operators');
+    }
+  }
+
+  Future<Map<String, dynamic>> initiateSavingsPayment({
+    required String memberId,
+    required double amount,
+    required String phone,
+    required String operator,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/payments/savings/initiate'),
+      headers: await _getHeaders(),
+      body: jsonEncode({
+        'memberId': memberId,
+        'amount': amount,
+        'phone': phone,
+        'operator': operator,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception(_errorMessage(response.body, 'Failed to start savings payment'));
+    }
+  }
+
+  Future<Map<String, dynamic>> initiateLoanRepayment({
+    required String loanId,
+    required double amount,
+    required String phone,
+    required String operator,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/payments/loans/$loanId/repay/initiate'),
+      headers: await _getHeaders(),
+      body: jsonEncode({
+        'amount': amount,
+        'phone': phone,
+        'operator': operator,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception(_errorMessage(response.body, 'Failed to start loan repayment'));
+    }
+  }
+
+  Future<Map<String, dynamic>> getPaymentStatus(String paymentId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/payments/$paymentId/status'),
+      headers: await _getHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      throw Exception(_errorMessage(response.body, 'Failed to check payment status'));
+    }
+  }
+
+  String _errorMessage(String body, String fallback) {
+    try {
+      final data = jsonDecode(body);
+      if (data is Map && data['error'] != null) {
+        final error = data['error'];
+        if (error is String) return error;
+        return jsonEncode(error);
+      }
+    } catch (_) {
+      // Ignore malformed error bodies.
+    }
+    return fallback;
+  }
+
   // Reports
   Future<double> getCreditScore(String memberId) async {
     final response = await http.get(

@@ -9,6 +9,7 @@ import expensesRoutes from './routes/expenses';
 import reportsRoutes from './routes/reports';
 import usersRoutes from './routes/users';
 import settingsRoutes from './routes/settings';
+import paymentsRoutes from './routes/payments';
 
 dotenv.config();
 
@@ -16,7 +17,12 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    // Keep the raw body so PayChangu webhook signatures can be validated.
+    req.rawBody = buf;
+  },
+}));
 app.use('/uploads', express.static('uploads'));
 
 app.get('/health', (req, res) => {
@@ -31,6 +37,7 @@ app.use('/api/savings', savingsRoutes);
 app.use('/api/expenses', expensesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:sharvic_mobile/providers/auth_provider.dart';
+import 'package:sharvic_mobile/screens/payment_screen.dart';
 import 'package:sharvic_mobile/services/api_service.dart';
 
 class LoanDetailsScreen extends StatefulWidget {
@@ -47,6 +50,39 @@ class _LoanDetailsScreenState extends State<LoanDetailsScreen> {
     final parsed = DateTime.tryParse(value.toString());
     if (parsed == null) return 'N/A';
     return DateFormat('MMM dd, yyyy').format(parsed);
+  }
+
+  Future<void> _openRepayLoan() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final memberId = authProvider.memberId;
+    if (memberId == null) return;
+
+    final outstanding = (_loan?['outstandingBalance'] as num?)?.toDouble() ?? 0;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentScreen(
+          title: 'Repay Loan',
+          description: 'Repay loan ${_loan?['loanNo']} with mobile money.',
+          memberId: memberId,
+          initialAmount: outstanding,
+          initiatePayment: ({
+            required double amount,
+            required String phone,
+            required String operator,
+          }) {
+            return _apiService.initiateLoanRepayment(
+              loanId: widget.loanId,
+              amount: amount,
+              phone: phone,
+              operator: operator,
+            );
+          },
+          onSuccess: _loadLoanDetails,
+        ),
+      ),
+    );
   }
 
   @override
@@ -108,6 +144,21 @@ class _LoanDetailsScreenState extends State<LoanDetailsScreen> {
                   ),
                 ),
               ),
+              if (_loan!['status'] == 'disbursed' &&
+                  ((_loan!['outstandingBalance'] as num?) ?? 0) > 0) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _openRepayLoan,
+                    icon: const Icon(Icons.payments),
+                    label: const Text('Repay Loan with Mobile Money'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               if (_loan!['repayments'] != null && (_loan!['repayments'] as List).isNotEmpty) ...[
                 Text('Repayment History', style: Theme.of(context).textTheme.titleMedium),

@@ -95,6 +95,11 @@ export default function MemberDetailPage() {
                       {eligibility.eligible ? 'Eligible for a loan' : 'Not eligible for a loan'}
                     </span>
                   </div>
+                  {typeof eligibility.maxLoanAmount === 'number' && (
+                    <p className={`mt-2 text-xs ${eligibility.eligible ? 'text-green-700' : 'text-red-700'}`}>
+                      Maximum loan: K {eligibility.maxLoanAmount.toLocaleString()} (score × savings × {eligibility.loanToSavingsMultiplier})
+                    </p>
+                  )}
                   {!eligibility.eligible && eligibility.reasons?.length > 0 && (
                     <ul className="mt-3 space-y-2">
                       {eligibility.reasons.map((reason: string) => (

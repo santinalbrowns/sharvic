@@ -2,6 +2,12 @@ import { db, loans, loanRepayments, loanSchedules, penalties, contributions, exp
 import { eq, sql, and, lte } from 'drizzle-orm';
 
 /**
+ * Maximum a member can borrow is their savings balance multiplied by this
+ * factor, scaled by their credit score (score / 100).
+ */
+export const LOAN_TO_SAVINGS_MULTIPLIER = 3;
+
+/**
  * Calculate penalty for overdue loan installments
  * Default: 2% per week overdue
  */
@@ -245,19 +251,32 @@ export async function calculateCreditScore(memberId: string): Promise<number> {
   return breakdown.score;
 }
 
-/**
- * Check loan eligibility
- */
-export async function checkLoanEligibility(memberId: string, requestedAmount: number): Promise<{
+export interface LoanEligibility {
   eligible: boolean;
   reasons: string[];
   creditScore: number;
-}> {
+  savingsBalance: number;
+  loanToSavingsMultiplier: number;
+  maxLoanAmount: number;
+}
+
+/**
+ * Check loan eligibility
+ */
+export async function checkLoanEligibility(memberId: string, requestedAmount: number): Promise<LoanEligibility> {
   const reasons: string[] = [];
+  const requested = Number(requestedAmount) || 0;
   const member = await db.query.members.findFirst({ where: eq(members.id, memberId) });
   
   if (!member) {
-    return { eligible: false, reasons: ['Member not found'], creditScore: 0 };
+    return {
+      eligible: false,
+      reasons: ['Member not found'],
+      creditScore: 0,
+      savingsBalance: 0,
+      loanToSavingsMultiplier: LOAN_TO_SAVINGS_MULTIPLIER,
+      maxLoanAmount: 0,
+    };
   }
 
   if (member.status !== 'active') {
@@ -282,6 +301,22 @@ export async function checkLoanEligibility(memberId: string, requestedAmount: nu
     reasons.push(`Credit score too low: ${creditScore}/100 (minimum 40 required)`);
   }
 
+  // Cap the loan at a score-weighted multiple of the member's savings
+  const savingsAccount = await db.query.savingsAccounts.findFirst({
+    where: eq(savingsAccounts.memberId, memberId),
+  });
+  const savingsBalance = savingsAccount?.balance ?? 0;
+  const maxLoanAmount = Math.floor(
+    savingsBalance * (creditScore / 100) * LOAN_TO_SAVINGS_MULTIPLIER
+  );
+
+  if (requested > maxLoanAmount) {
+    reasons.push(
+      `Requested amount K ${requested.toLocaleString()} exceeds the maximum of K ${maxLoanAmount.toLocaleString()} ` +
+      `(score ${creditScore}/100 × savings K ${savingsBalance.toLocaleString()} × ${LOAN_TO_SAVINGS_MULTIPLIER})`
+    );
+  }
+
   // Check if previous loans were defaulted
   const defaultedLoans = await db.query.loans.findMany({
     where: and(
@@ -304,7 +339,14 @@ export async function checkLoanEligibility(memberId: string, requestedAmount: nu
   }
 
   const eligible = reasons.length === 0;
-  return { eligible, reasons, creditScore };
+  return {
+    eligible,
+    reasons,
+    creditScore,
+    savingsBalance,
+    loanToSavingsMultiplier: LOAN_TO_SAVINGS_MULTIPLIER,
+    maxLoanAmount,
+  };
 }
 
 /**

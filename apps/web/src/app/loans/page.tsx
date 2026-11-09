@@ -75,7 +75,10 @@ export default function LoansPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Principal Amount (K) *</label>
-              <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg" value={form.principalAmount} onChange={e=>setForm({...form, principalAmount:e.target.value})} required />
+              <input type="number" min="0" max={eligibility?.maxLoanAmount} className="w-full px-3 py-2 border border-gray-300 rounded-lg" value={form.principalAmount} onChange={e=>setForm({...form, principalAmount:e.target.value})} required />
+              {eligibility && (
+                <p className="mt-1 text-xs text-gray-500">Maximum available: K {eligibility.maxLoanAmount?.toLocaleString()}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Term (Months) *</label>
@@ -103,7 +106,13 @@ export default function LoansPage() {
                       <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-gray-700 border border-gray-200">
                         Credit score: {eligibility.creditScore}/100
                       </span>
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-gray-700 border border-gray-200">
+                        Max loan: K {eligibility.maxLoanAmount?.toLocaleString()}
+                      </span>
                     </div>
+                    <p className="mt-2 text-xs text-gray-600">
+                      Limit = score × savings × {eligibility.loanToSavingsMultiplier} (savings balance: K {eligibility.savingsBalance?.toLocaleString()})
+                    </p>
                     {eligibility.reasons?.length > 0 && (
                       <ul className="mt-3 space-y-2">
                         {eligibility.reasons.map((reason:string)=>(
